@@ -1,8 +1,4 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26403.7
-MinimumVisualStudioVersion = 10.0.40219.1
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NintendoSpy", "NintendoSpy.csproj", "{265E6467-1C02-463D-ADE0-FDE2A3300925}"
 EndProject
 Global
@@ -12,6 +8,7 @@ Global
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{265E6467-1C02-463D-ADE0-FDE2A3300925}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{265E6467-1C02-463D-ADE0-FDE2A3300925}.Release|Any CPU.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
