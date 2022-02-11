@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using SlimDX;
-using SlimDX.DirectInput;
+using SharpDX;
+using SharpDX.DirectInput;
 using System.Windows.Threading;
 using System.IO;
 
@@ -23,7 +23,7 @@ namespace NintendoSpy.Readers
         Joystick _joystick;
         public static List<uint> GetDevices()
         {
-            int amount = new DirectInput().GetDevices(DeviceClass.GameController, DeviceEnumerationFlags.AttachedOnly).Count;
+            int amount = new DirectInput().GetDevices(DeviceClass.GameControl, DeviceEnumerationFlags.AttachedOnly).Count;
             var result = new List<uint>(amount);
             for (uint i = 0; i < amount; i++)
             {
@@ -36,21 +36,17 @@ namespace NintendoSpy.Readers
         {
             _dinput = new DirectInput();
  
-            var devices = _dinput.GetDevices (DeviceClass.GameController, DeviceEnumerationFlags.AttachedOnly);
+            var devices = _dinput.GetDevices (DeviceClass.GameControl, DeviceEnumerationFlags.AttachedOnly);
             if (devices.Count - 1 < id) {
                 throw new IOException ("GamepadReader could not find a connected gamepad with the given id.");
             }
             _joystick = new Joystick (_dinput, devices[id].InstanceGuid);
  
-            foreach (var obj in _joystick.GetObjects()) {
-                if ((obj.ObjectType & ObjectDeviceType.Axis) != 0) {
-                    _joystick.GetObjectPropertiesById ((int)obj.ObjectType).SetRange (-RANGE, RANGE);
-                }
+            foreach (var axis in _joystick.GetObjects(DeviceObjectTypeFlags.Axis)) {
+                _joystick.GetObjectPropertiesById (axis.ObjectId).Range = new InputRange(-RANGE, RANGE);
             }
- 
-            if (_joystick.Acquire().IsFailure) {
-                throw new IOException ("Connected gamepad could not be acquired.");
-            }
+
+            _joystick.Acquire();
 
             _timer = new DispatcherTimer ();
             _timer.Interval = TimeSpan.FromMilliseconds (TIMER_MS);
@@ -64,7 +60,11 @@ namespace NintendoSpy.Readers
 
         void tick (object sender, EventArgs e)
         {
-            if (_joystick.Poll().IsFailure) {
+            try
+            {
+                _joystick.Poll();
+            } catch (SharpDXException)
+            {
                 Finish ();
                 if (ControllerDisconnected != null) ControllerDisconnected (this, EventArgs.Empty);
                 return;
@@ -74,10 +74,10 @@ namespace NintendoSpy.Readers
             var state = _joystick.GetCurrentState ();
 
             for (int i = 0; i < _joystick.Capabilities.ButtonCount; ++i) {
-                outState.SetButton ("b"+i.ToString(), state.IsPressed(i));
+                outState.SetButton ("b"+i, state.Buttons[i]);
             }
 
-            int[] pov = state.GetPointOfViewControllers ();
+            int[] pov = state.PointOfViewControllers;
 
             outState.SetButton ("up", false);
             outState.SetButton ("right", false);
