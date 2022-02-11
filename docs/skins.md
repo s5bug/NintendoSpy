@@ -1,3 +1,0 @@
-
-Skin format documentation
-===

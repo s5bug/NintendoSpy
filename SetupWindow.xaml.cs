@@ -19,8 +19,6 @@ namespace NintendoSpy
     {
         SetupWindowViewModel _vm;
         DispatcherTimer _portListUpdateTimer;
-        DispatcherTimer _xiAndGamepadListUpdateTimer;
-        List <Skin> _skins;
 
         public SetupWindow ()
         {
@@ -33,107 +31,47 @@ namespace NintendoSpy
                 Close ();
                 return;
             }
-
-            var results = Skin.LoadAllSkinsFromParentFolder ("skins");
-            _skins = results.SkinsLoaded;
-
-            if (results.ParseErrors.Count > 0) {
-                showSkinParseErrors (results.ParseErrors);
-            }
-
-            _vm.Skins.UpdateContents (_skins.Where (x => x.Type == InputSource.DEFAULT));
             
-
             _vm.Sources.UpdateContents (InputSource.ALL);
             
 
-            _vm.DelayInMilliseconds = Properties.Settings.Default.Delay;
+            _vm.ViewerServerAddress = Properties.Settings.Default.ViewerServerAddress;
 
             _portListUpdateTimer = new DispatcherTimer ();
             _portListUpdateTimer.Interval = TimeSpan.FromSeconds (1);
             _portListUpdateTimer.Tick += (sender, e) => updatePortList ();
             _portListUpdateTimer.Start ();
 
-            _xiAndGamepadListUpdateTimer = new DispatcherTimer();
-            _xiAndGamepadListUpdateTimer.Interval = TimeSpan.FromSeconds(2);
-            _xiAndGamepadListUpdateTimer.Tick += (sender, e) =>
-            {
-                if (_vm.Sources.SelectedItem == InputSource.PAD)
-                {
-                    updateGamepadList();
-                }
-                else if (_vm.Sources.SelectedItem == InputSource.PC360)
-                {
-                    updateXIList();
-                }
-            };
-            _xiAndGamepadListUpdateTimer.Start();
-
             updatePortList ();
             _vm.Ports.SelectFirst ();
-            _vm.XIAndGamepad.SelectFirst();
             _vm.Sources.SelectId(Properties.Settings.Default.Source);
-            _vm.Skins.SelectId(Properties.Settings.Default.Skin);
-        }
-
-        void showSkinParseErrors (List <string> errs) {
-            StringBuilder msg = new StringBuilder ();
-            msg.AppendLine ("Some skins were unable to be parsed:");
-            foreach (var err in errs) msg.AppendLine (err);
-            MessageBox.Show (msg.ToString (), "NintendoSpy", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
         void updatePortList () {
             _vm.Ports.UpdateContents (SerialPort.GetPortNames ());
         }
 
-        void updateGamepadList()
-        {
-            _vm.XIAndGamepad.UpdateContents(GamepadReader.GetDevices());
-        }
-
-        void updateXIList()
-        {
-            _vm.XIAndGamepad.UpdateContents(XInputReader.GetDevices());
-        }
-
         void goButton_Click (object sender, RoutedEventArgs e) 
         {
             this.Hide ();
             Properties.Settings.Default.Source = _vm.Sources.GetSelectedId();
-            Properties.Settings.Default.Skin = _vm.Skins.GetSelectedId();
-            Properties.Settings.Default.Delay = _vm.DelayInMilliseconds;
-            Properties.Settings.Default.Background = _vm.Backgrounds.GetSelectedId();
+            Properties.Settings.Default.ViewerServerAddress = _vm.ViewerServerAddress;
             Properties.Settings.Default.Save();
-
+            
+#if !DEBUG
             try {
-                IControllerReader reader; 
-                if(_vm.Sources.SelectedItem == InputSource.PAD)
-                {
-                    reader = _vm.Sources.SelectedItem.BuildReader(_vm.XIAndGamepad.SelectedItem.ToString());
-                }
-                else if (_vm.Sources.SelectedItem == InputSource.PC360)
-                {
-                    reader = _vm.Sources.SelectedItem.BuildReader(_vm.XIAndGamepad.SelectedItem.ToString());
-                }
-                else {
-                    reader = _vm.Sources.SelectedItem.BuildReader(_vm.Ports.SelectedItem);
-                }
-                if (_vm.DelayInMilliseconds > 0)
-                    reader = new DelayedControllerReader(reader, _vm.DelayInMilliseconds);
-
-                new ViewWindow (_vm.Skins.SelectedItem,
-                                _vm.Backgrounds.SelectedItem, 
-                                reader)
-                    .ShowDialog ();
-            }
-#if DEBUG
-            catch (ConfigParseException ex) {
-#else
-            catch (Exception ex) {
 #endif
+                IControllerReader reader; 
+                reader = _vm.Sources.SelectedItem.BuildReader(_vm.Ports.SelectedItem);
+
+                new ViewWindow (reader, _vm.ViewerServerAddress)
+                    .ShowDialog ();
+#if !DEBUG
+            }
+            catch (Exception ex) {
                 MessageBox.Show (ex.Message, "NintendoSpy", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+#endif
 
             this.Show ();
         }
@@ -141,28 +79,7 @@ namespace NintendoSpy
         private void SourceSelectComboBox_SelectionChanged (object sender, SelectionChangedEventArgs e)
         {
             if (_vm.Sources.SelectedItem == null) return;
-            _vm.ComPortOptionVisibility = _vm.Sources.SelectedItem.RequiresComPort ? Visibility.Visible : Visibility.Hidden;
-            _vm.XIAndGamepadOptionVisibility = _vm.Sources.SelectedItem.RequiresId ? Visibility.Visible : Visibility.Hidden;
-            updateGamepadList();
-            updateXIList();
             updatePortList();
-            _vm.Skins.UpdateContents (_skins.Where (x => x.Type == _vm.Sources.SelectedItem));
-            _vm.Skins.SelectFirst ();
-            if(_vm.Sources.GetSelectedId() == Properties.Settings.Default.Source)
-            {
-                _vm.Skins.SelectId(Properties.Settings.Default.Skin);
-            }
-        }
-
-        private void Skin_SelectionChanged (object sender, SelectionChangedEventArgs e)
-        {
-            if (_vm.Skins.SelectedItem == null) return;
-            _vm.Backgrounds.UpdateContents (_vm.Skins.SelectedItem.Backgrounds);
-            _vm.Backgrounds.SelectFirst ();
-            if (_vm.Skins.GetSelectedId() == Properties.Settings.Default.Skin)
-            {
-                _vm.Backgrounds.SelectId(Properties.Settings.Default.Background);
-            }
         }
     }
 
@@ -213,38 +130,13 @@ namespace NintendoSpy
         }
 
         public ListView <string> Ports { get; set; }
-        public ListView <uint> XIAndGamepad { get; set; }
-        public ListView <Skin> Skins { get; set; }
-        public ListView <Skin.Background> Backgrounds { get; set; }
         public ListView <InputSource> Sources { get; set; }
-        public int DelayInMilliseconds { get; set; }
-
-        Visibility _comPortOptionVisibility;
-        public Visibility ComPortOptionVisibility {
-            get { return _comPortOptionVisibility; }
-            set {
-                _comPortOptionVisibility = value;
-                NotifyPropertyChanged ("ComPortOptionVisibility");
-            }
-        }
-
-        Visibility _XIAndGamepadOptionVisibility;
-        public Visibility XIAndGamepadOptionVisibility
-        {
-            get { return _XIAndGamepadOptionVisibility; }
-            set
-            {
-                _XIAndGamepadOptionVisibility = value;
-                NotifyPropertyChanged("XIAndGamepadOptionVisibility");
-            }
-        }
+        public string ViewerServerAddress { get; set; }
 
         public SetupWindowViewModel () {
             Ports   = new ListView <string> ();
-            XIAndGamepad = new ListView<uint>();
-            Skins   = new ListView <Skin> ();
-            Sources = new ListView <InputSource> ();
-            Backgrounds = new ListView <Skin.Background> ();
+            Sources = new ListView<InputSource>();
+            ViewerServerAddress = "localhost:4096";
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
