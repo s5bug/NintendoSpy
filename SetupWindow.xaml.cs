@@ -1,149 +1,128 @@
 ﻿using System;
-using System.Linq;
 using System.Collections.Generic;
 using System.IO.Ports;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Media;
 using System.Windows.Threading;
-
 using NintendoSpy.Readers;
 using System.ComponentModel;
-using System.IO;
-using System.Text;
 
-namespace NintendoSpy
+namespace NintendoSpy;
+
+public partial class SetupWindow : Window
 {
-    public partial class SetupWindow : Window
+    private readonly SetupWindowViewModel _vm;
+
+    public SetupWindow()
     {
-        SetupWindowViewModel _vm;
-        DispatcherTimer _portListUpdateTimer;
+        InitializeComponent();
+        _vm = new SetupWindowViewModel();
+        DataContext = _vm;
 
-        public SetupWindow ()
-        {
-            InitializeComponent ();
-            _vm = new SetupWindowViewModel ();
-            DataContext = _vm;
+        _vm.ViewerServerAddress = Properties.Settings.Default.ViewerServerAddress;
 
-            if (! Directory.Exists ("skins")) {
-                MessageBox.Show ("Could not find skins folder!", "NintendoSpy", MessageBoxButton.OK, MessageBoxImage.Error);
-                Close ();
-                return;
-            }
-            
-            _vm.Sources.UpdateContents (InputSource.ALL);
-            
+        var portListUpdateTimer = new DispatcherTimer();
+        portListUpdateTimer.Interval = TimeSpan.FromSeconds(1);
+        portListUpdateTimer.Tick += (sender, e) => UpdatePortList();
+        portListUpdateTimer.Start();
 
-            _vm.ViewerServerAddress = Properties.Settings.Default.ViewerServerAddress;
-
-            _portListUpdateTimer = new DispatcherTimer ();
-            _portListUpdateTimer.Interval = TimeSpan.FromSeconds (1);
-            _portListUpdateTimer.Tick += (sender, e) => updatePortList ();
-            _portListUpdateTimer.Start ();
-
-            updatePortList ();
-            _vm.Ports.SelectFirst ();
-            _vm.Sources.SelectId(Properties.Settings.Default.Source);
-        }
-
-        void updatePortList () {
-            _vm.Ports.UpdateContents (SerialPort.GetPortNames ());
-        }
-
-        void goButton_Click (object sender, RoutedEventArgs e) 
-        {
-            this.Hide ();
-            Properties.Settings.Default.Source = _vm.Sources.GetSelectedId();
-            Properties.Settings.Default.ViewerServerAddress = _vm.ViewerServerAddress;
-            Properties.Settings.Default.Save();
-            
-#if !DEBUG
-            try {
-#endif
-                IControllerReader reader; 
-                reader = _vm.Sources.SelectedItem.BuildReader(_vm.Ports.SelectedItem);
-
-                new ViewWindow (reader, _vm.ViewerServerAddress)
-                    .ShowDialog ();
-#if !DEBUG
-            }
-            catch (Exception ex) {
-                MessageBox.Show (ex.Message, "NintendoSpy", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-#endif
-
-            this.Show ();
-        }
-
-        private void SourceSelectComboBox_SelectionChanged (object sender, SelectionChangedEventArgs e)
-        {
-            if (_vm.Sources.SelectedItem == null) return;
-            updatePortList();
-        }
+        UpdatePortList();
+        _vm.Ports.SelectFirst();
     }
 
-    public class SetupWindowViewModel : INotifyPropertyChanged
+    private void UpdatePortList()
     {
-        public class ListView <T>
-        {
-            List <T> _items;
+        _vm.Ports.UpdateContents(SerialPort.GetPortNames());
+    }
 
-            public CollectionView Items { get; private set; }
-            public T SelectedItem { get; set; }
+    private void GoButton_Click(object sender, RoutedEventArgs e)
+    {
+        this.Hide();
+        Properties.Settings.Default.ViewerServerAddress = _vm.ViewerServerAddress;
+        Properties.Settings.Default.Save();
 
-            public ListView () {
-                _items = new List <T> ();
-                Items = new CollectionView (_items);
-            }
+#if !DEBUG
+        try {
+#endif
+        IControllerReader reader;
+        reader = new SerialControllerReader(_vm.Ports.SelectedItem, GameCube.ReadFromPacket);
 
-            public void UpdateContents (IEnumerable <T> items) {
-                _items.Clear ();
-                _items.AddRange (items);
-                Items.Refresh ();
-            }
-            
-            public void SelectFirst () {
-                if (_items.Count > 0) SelectedItem = _items [0];
-            }
-
-            public void SelectId(int id)
-            {
-                if (_items.Count > 0 && id >= 0 && id < _items.Count)
-                {
-                    SelectedItem = _items[id];
-                }
-                else
-                {
-                    SelectFirst();
-                }
-            }
-
-            public int GetSelectedId()
-            {
-                if( SelectedItem != null)
-                {
-                    return _items.IndexOf(SelectedItem);
-                }
-                return -1;
-            }
+        new ViewWindow(reader, _vm.ViewerServerAddress)
+            .ShowDialog();
+#if !DEBUG
         }
-
-        public ListView <string> Ports { get; set; }
-        public ListView <InputSource> Sources { get; set; }
-        public string ViewerServerAddress { get; set; }
-
-        public SetupWindowViewModel () {
-            Ports   = new ListView <string> ();
-            Sources = new ListView<InputSource>();
-            ViewerServerAddress = "localhost:4096";
+        catch (Exception ex) {
+            MessageBox.Show (ex.Message, "NintendoSpy", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+#endif
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        void NotifyPropertyChanged (string prop) {
-            if (PropertyChanged == null) return;
-            PropertyChanged (this, new PropertyChangedEventArgs (prop));
-        }
+        this.Show();
     }
 }
 
+public class SetupWindowViewModel : INotifyPropertyChanged
+{
+    public class ListView<T>
+    {
+        private readonly List<T> _items;
+
+        public CollectionView Items { get; }
+        public T SelectedItem { get; set; }
+
+        public ListView()
+        {
+            _items = new List<T>();
+            Items = new CollectionView(_items);
+        }
+
+        public void UpdateContents(IEnumerable<T> items)
+        {
+            _items.Clear();
+            _items.AddRange(items);
+            Items.Refresh();
+        }
+
+        public void SelectFirst()
+        {
+            if (_items.Count > 0) SelectedItem = _items[0];
+        }
+
+        public void SelectId(int id)
+        {
+            if (_items.Count > 0 && id >= 0 && id < _items.Count)
+            {
+                SelectedItem = _items[id];
+            }
+            else
+            {
+                SelectFirst();
+            }
+        }
+
+        public int GetSelectedId()
+        {
+            if (SelectedItem != null)
+            {
+                return _items.IndexOf(SelectedItem);
+            }
+
+            return -1;
+        }
+    }
+
+    public ListView<string> Ports { get; set; }
+    public string ViewerServerAddress { get; set; }
+
+    public SetupWindowViewModel()
+    {
+        Ports = new ListView<string>();
+        ViewerServerAddress = "localhost:4096";
+    }
+
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    void NotifyPropertyChanged(string prop)
+    {
+        if (PropertyChanged != null) PropertyChanged(this, new PropertyChangedEventArgs(prop));
+    }
+}

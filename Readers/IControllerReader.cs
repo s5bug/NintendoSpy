@@ -1,18 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace NintendoSpy.Readers
+namespace NintendoSpy.Readers;
+
+public delegate void StateEventHandler(IControllerReader sender, ControllerState state);
+
+public interface IControllerReader
 {
-    public delegate void StateEventHandler (IControllerReader sender, ControllerState state);
+    event StateEventHandler ControllerStateChanged;
+    event EventHandler ControllerDisconnected;
 
-    public interface IControllerReader
-    {
-        event StateEventHandler ControllerStateChanged;
-        event EventHandler ControllerDisconnected;
-
-        void Finish ();
-    }
+    void Finish();
 }

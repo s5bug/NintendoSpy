@@ -19,6 +19,6 @@
                   SelectedValue="{Binding Ports.SelectedItem}" />
         <Label Name="AddressLabel" Content="Viewer Address:" HorizontalAlignment="Left" VerticalAlignment="Top" Foreground="#FFCBCBCB" FontFamily="Calibri" FontSize="16" Grid.Row="1" Grid.Column="0" />
         <TextBox Name="AddressBox" VerticalAlignment="Top" Height="24" Text="{Binding ViewerServerAddress}" FontSize="16" FontFamily="Calibri" Background="#FF3E3E42" Foreground="#FFCBCBCB" BorderBrush="#FF656565" Grid.Row="1" Grid.Column="1" />
-        <Button Name="goButton" Content="Go!" Height="23" VerticalAlignment="Bottom" FontSize="16" FontFamily="Calibri" Background="#FF3E3E42" Foreground="#FFCBCBCB" BorderBrush="#FF252526" Click="goButton_Click" Grid.Row="2" Grid.ColumnSpan="2" Grid.Column="0" />
+        <Button Name="GoButton" Content="Go!" Height="23" VerticalAlignment="Bottom" FontSize="16" FontFamily="Calibri" Background="#FF3E3E42" Foreground="#FFCBCBCB" BorderBrush="#FF252526" Click="GoButton_Click" Grid.Row="2" Grid.ColumnSpan="2" Grid.Column="0" />
     </Grid>
 </Window>

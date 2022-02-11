@@ -1,22 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 
-namespace NintendoSpy.Readers
+namespace NintendoSpy.Readers;
+
+public class ControllerState
 {
-    public class ControllerState
+    public IReadOnlyDictionary <string, bool> Buttons { get; }
+    public IReadOnlyDictionary <string, float> Analogs { get; }
+
+    public ControllerState (IReadOnlyDictionary <string, bool> buttons, IReadOnlyDictionary <string, float> analogs)
     {
-        static public readonly ControllerState Zero = new ControllerState
-            (new Dictionary <string, bool> (), new Dictionary <string, float> ());
-
-        public IReadOnlyDictionary <string, bool> Buttons { get; private set; }
-        public IReadOnlyDictionary <string, float> Analogs { get; private set;  }
-
-        public ControllerState (IReadOnlyDictionary <string, bool> buttons, IReadOnlyDictionary <string, float> analogs)
-        {
-            Buttons = buttons;
-            Analogs = analogs;
-        }
+        Buttons = buttons;
+        Analogs = analogs;
     }
 }
